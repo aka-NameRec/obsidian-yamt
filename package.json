@@ -2,7 +2,8 @@
   "name": "yamt",
   "version": "0.2.0",
   "private": true,
-  "license": "MIT",
+  "license": "Unlicense",
+  "author": "aka.NameRec@gmail.com",
   "scripts": {
     "dev": "esbuild src/main.ts --bundle --outfile=main.js --external:obsidian --format=cjs --target=es2018 --platform=browser --watch",
     "build": "esbuild src/main.ts --bundle --outfile=main.js --external:obsidian --format=cjs --target=es2018 --platform=browser --minify",

@@ -28,9 +28,5 @@ coverage/
 *.local
 
 # ConPort database (context management)
-context_portal/context.db
-context_portal/logs/
-context_portal/__pycache__/
-context_portal/alembic/__pycache__/
-context_portal/alembic/versions/__pycache__/
+context_portal/
 

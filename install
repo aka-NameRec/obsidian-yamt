@@ -1,0 +1,4 @@
+#!/bin/bash
+cp manifest.json /home/shtirliz/.my-links/logs-obsidian/.obsidian/plugins/yamt/
+cp main.js /home/shtirliz/.my-links/logs-obsidian/.obsidian/plugins/yamt/
+cp styles.css /home/shtirliz/.my-links/logs-obsidian/.obsidian/plugins/yamt/

@@ -70,3 +70,16 @@ The plugin includes basic normalization tests (Vitest):
 ```bash
 npm run test
 ```
+
+## License
+
+This project is released into the **public domain** under [The Unlicense](LICENSE).
+
+You are free to use, modify, and distribute this software for any purpose, commercial or non-commercial, without any restrictions.
+
+## Author
+
+**aka.NameRec@gmail.com**
+
+- GitHub: https://github.com/shtirliz/obsidian-yamt
+- Issues: https://github.com/shtirliz/obsidian-yamt/issues

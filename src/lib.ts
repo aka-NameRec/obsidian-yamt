@@ -3,6 +3,29 @@ import yaml from "js-yaml";
 /** Public types used in tests and main */
 export type Align = "left" | "center" | "right";
 
+/**
+ * Normalized cell structure after processing.
+ * All properties are properly typed and validated.
+ */
+export interface NormalizedCell {
+  /** Cell content (supports markdown) */
+  data: string;
+  /** Text alignment */
+  align?: Align;
+  /** Text color (CSS value) */
+  color?: string;
+  /** Background color (CSS value) */
+  bg?: string;
+  /** Number of columns to span */
+  colspan?: number;
+  /** Number of rows to span */
+  rowspan?: number;
+}
+
+/**
+ * Raw cell input from YAML (before normalization).
+ * Can be a simple string or an object with various properties.
+ */
 export type RawCell =
   | string
   | {
@@ -29,8 +52,12 @@ export type RawCell =
       hts_rowspan?: number | string;
     };
 
-export type Row = RawCell[];
+/** A table row (after normalization) is an array of normalized cells */
+export type Row = NormalizedCell[];
 
+/**
+ * Configuration options for table rendering.
+ */
 export interface YamtOptions {
   /** If true, render all rows in <tbody> (no <thead>). */
   noThead?: boolean;
@@ -42,27 +69,62 @@ export interface YamtOptions {
   ariaLabel?: string;
 }
 
+/**
+ * Normalized table document structure.
+ * This is the result of parsing and normalizing the raw YAML input.
+ */
 export interface YamtDoc {
+  /** Table header rows (rendered in <thead>) */
   header?: Row[];
+  /** Table body rows (rendered in <tbody>) */
   body?: Row[];
+  /** Rendering options */
   options?: YamtOptions;
 }
 
-/** Errors */
-export class YamtYamlError extends Error { name = "YAMT/YamlError"; constructor(msg: string, public inner?: any){super(msg);} }
-export class YamtValidationError extends Error { name = "YAMT/ValidationError"; }
+/** Custom error for YAML parsing failures */
+export class YamtYamlError extends Error { 
+  name = "YAMT/YamlError"; 
+  constructor(msg: string, public inner?: unknown) {
+    super(msg);
+  }
+}
 
+/** Custom error for validation failures */
+export class YamtValidationError extends Error { 
+  name = "YAMT/ValidationError"; 
+}
+
+/**
+ * Parses YAML source string and returns the parsed document.
+ * Enhances js-yaml errors with precise location information.
+ * 
+ * @param source - YAML source string to parse
+ * @returns Parsed YAML document (type unknown, requires normalization)
+ * @throws {YamtYamlError} If YAML parsing fails
+ */
 export function parseYamlAny(source: string): unknown {
   try {
     return yaml.load(source);
-  } catch (e: any) {
-    const loc = e?.mark ? `строка ${e.mark.line + 1}, столбец ${e.mark.column + 1}` : null;
-    const msg = e?.message ?? "Неизвестная ошибка разбора YAML.";
+  } catch (e: unknown) {
+    const error = e as any;
+    const loc = error?.mark 
+      ? `line ${error.mark.line + 1}, column ${error.mark.column + 1}` 
+      : null;
+    const msg = error?.message ?? "Unknown YAML parsing error.";
     const hint = loc ? `${msg} (${loc})` : msg;
     throw new YamtYamlError(hint, e);
   }
 }
 
+/**
+ * Normalizes raw YAML document into a structured table model.
+ * Supports multiple YAML formats: header/body objects, flat matrices, section arrays.
+ * 
+ * @param doc - Raw YAML document (unknown type from parser)
+ * @returns Normalized table document with header, body, and options
+ * @throws {YamtValidationError} If document structure is invalid
+ */
 export function normalizeToModel(doc: unknown): YamtDoc {
   if (isRecord(doc)) {
     const options = maybeOptions((doc as any).options);
@@ -118,15 +180,15 @@ export function normalizeToModel(doc: unknown): YamtDoc {
   }
 
   throw new YamtValidationError([
-    "Неверная структура YAML для YAMT.",
-    "Ожидается объект с ключами `header`/`body` или массив секций, либо плоская матрица (массив массивов).",
-    "Пример:",
+    "Invalid YAML structure for YAMT.",
+    "Expected: object with `header`/`body` keys, section array, or flat matrix (array of arrays).",
+    "Example:",
     "",
     "header:",
-    "  - [ { data: \"📦 Продукт\", colspan: 2 }, { data: \"Цена\" } ]",
-    "  - [ { data: \"Категория\" }, { data: \"Название\" }, { data: \"€\", align: right } ]",
+    "  - [ { data: \"📦 Product\", colspan: 2 }, { data: \"Price\" } ]",
+    "  - [ { data: \"Category\" }, { data: \"Name\" }, { data: \"€\", align: right } ]",
     "body:",
-    "  - [ \"**Техника**\", \"`Ноутбук Dell XPS`\", { data: \"1299\", align: right } ]",
+    "  - [ \"**Electronics**\", \"`Dell XPS Laptop`\", { data: \"1299\", align: right } ]",
   ].join("\n"));
 }
 
@@ -151,6 +213,13 @@ function maybeOptions(v: unknown): YamtOptions {
   return out;
 }
 
+/**
+ * Attempts to normalize an unknown value into an array of table rows.
+ * Returns undefined if the value cannot be interpreted as rows.
+ * 
+ * @param rows - Potential row data from YAML
+ * @returns Normalized rows or undefined if invalid
+ */
 export function maybeNormalizeRows(rows: unknown): Row[] | undefined {
   if (!rows) return undefined;
   if (!Array.isArray(rows)) return undefined;
@@ -163,11 +232,24 @@ export function maybeNormalizeRows(rows: unknown): Row[] | undefined {
   return result;
 }
 
-export function normalizeRow(cells: RawCell[]): Row {
+/**
+ * Normalizes an array of raw cells into a table row.
+ * 
+ * @param cells - Array of raw cell data
+ * @returns Array of normalized cells
+ */
+export function normalizeRow(cells: RawCell[]): NormalizedCell[] {
   return cells.map(normalizeCell);
 }
 
-export function normalizeCell(cell: RawCell): RawCell {
+/**
+ * Normalizes a single raw cell into a structured NormalizedCell object.
+ * Handles various input formats: strings, objects, nested cell objects.
+ * 
+ * @param cell - Raw cell data (string or object)
+ * @returns Normalized cell with validated properties
+ */
+export function normalizeCell(cell: RawCell): NormalizedCell {
   if (typeof cell === "string") return { data: cell };
   if (isRecord(cell)) {
     if ("cell" in cell) {
@@ -180,26 +262,46 @@ export function normalizeCell(cell: RawCell): RawCell {
   return { data: String(cell ?? "") };
 }
 
-export function normalizeCellObject(obj: Record<string, any>): any {
-  const out: Record<string, any> = {};
+/**
+ * Normalizes a cell object, extracting and validating all properties.
+ * Handles synonyms (e.g., hts_colspan for colspan).
+ * 
+ * @param obj - Raw cell object from YAML
+ * @returns Normalized cell with typed properties
+ */
+export function normalizeCellObject(obj: Record<string, any>): NormalizedCell {
+  const out: Partial<NormalizedCell> = {};
   if (obj.data != null) out.data = String(obj.data);
   const colspan = obj.colspan ?? obj.hts_colspan ?? obj.span;
   const rowspan = obj.rowspan ?? obj.hts_rowspan;
   if (colspan != null) out.colspan = toInt(colspan);
   if (rowspan != null) out.rowspan = toInt(rowspan);
-  if (obj.align && ["left","center","right"].includes(obj.align)) out.align = obj.align;
+  if (obj.align && ["left","center","right"].includes(obj.align)) out.align = obj.align as Align;
   if (obj.color) out.color = String(obj.color);
   if (obj.bg) out.bg = String(obj.bg);
   if (out.data == null) out.data = "";
-  return out;
+  return out as NormalizedCell;
 }
 
+/**
+ * Converts an unknown value to a positive integer.
+ * Returns undefined if the value is not a valid positive number.
+ * 
+ * @param v - Value to convert to integer
+ * @returns Positive integer or undefined
+ */
 export function toInt(v: unknown): number | undefined {
   const n = Number(v);
   if (Number.isFinite(n) && n >= 1) return Math.floor(n);
   return undefined;
 }
 
+/**
+ * Type guard to check if a value is a non-null object (record).
+ * 
+ * @param v - Value to check
+ * @returns True if value is an object (not null, not array)
+ */
 export function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null;
 }
