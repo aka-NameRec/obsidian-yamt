@@ -1,0 +1,10 @@
+{
+  "id": "yamt",
+  "name": "YAMT (Yet Another Markdown Table)",
+  "version": "0.2.0",
+  "minAppVersion": "1.5.0",
+  "description": "Render tables from YAML with colspan/rowspan, alignment, colors, markdown-in-cells, captions, and flexible header control.",
+  "author": "You",
+  "authorUrl": "https://example.com",
+  "isDesktopOnly": false
+}

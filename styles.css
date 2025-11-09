@@ -1,0 +1,30 @@
+table.yamt-table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.5rem 0;
+}
+.yamt-table caption {
+  caption-side: top;
+  text-align: left;
+  padding: 0.25rem 0.5rem;
+  color: var(--text-muted);
+}
+.yamt-table th,
+.yamt-table td {
+  border: 1px solid var(--background-modifier-border);
+  padding: 0.4rem 0.6rem;
+  vertical-align: top;
+}
+.yamt-table thead th {
+  background: var(--background-modifier-hover);
+  font-weight: 600;
+}
+.yamt-error {
+  border: 1px solid var(--color-red);
+  background: color-mix(in oklab, var(--color-red) 8%, transparent);
+  padding: 0.75rem;
+  border-radius: 6px;
+  white-space: pre-wrap;
+  font-family: var(--font-monospace);
+}
+.yamt-error strong { color: var(--color-red); }

@@ -1,0 +1,23 @@
+{
+  "name": "yamt",
+  "version": "0.2.0",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "dev": "esbuild src/main.ts --bundle --outfile=main.js --external:obsidian --format=cjs --target=es2018 --platform=browser --watch",
+    "build": "esbuild src/main.ts --bundle --outfile=main.js --external:obsidian --format=cjs --target=es2018 --platform=browser --minify",
+    "check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0",
+    "obsidian": "^1.5.0",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4",
+    "@types/node": "^22.7.5"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.0"
+  }
+}

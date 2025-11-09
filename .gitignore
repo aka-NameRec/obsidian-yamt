@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+main.js
+main.js.map
+*.js.map
+
+# TypeScript cache
+*.tsbuildinfo
+
+# IDE
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Test coverage
+coverage/
+
+# Local development
+*.local
+
+# ConPort database (context management)
+context_portal/context.db
+context_portal/logs/
+context_portal/__pycache__/
+context_portal/alembic/__pycache__/
+context_portal/alembic/versions/__pycache__/
+
