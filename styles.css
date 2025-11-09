@@ -16,7 +16,6 @@ table.yamt-table {
   vertical-align: top;
 }
 .yamt-table thead th {
-  background: var(--background-modifier-hover);
   font-weight: 600;
 }
 .yamt-error {
