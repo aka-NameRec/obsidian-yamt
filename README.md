@@ -13,6 +13,30 @@ Render tables from YAML in Obsidian.
 
 ## Usage
 
+### Paste from Clipboard
+
+YAMT provides commands to quickly convert tables from Excel, LibreOffice Writer, or CSV format directly from your clipboard:
+
+1. **Paste table from clipboard (with header)** — Converts clipboard table data to YAMT format, treating the first row as a header
+2. **Paste table from clipboard (body only)** — Converts all rows as body data (no header section)
+
+**How to use:**
+1. Copy a table in Excel/Writer (or CSV text)
+2. Open Obsidian command palette (`Ctrl/Cmd + P`)
+3. Type "YAMT paste" and select the desired command
+4. The YAMT table will be inserted at your cursor position
+
+**Supported formats:**
+- Tab-separated values (Excel, LibreOffice Calc)
+- Comma-separated values (CSV)
+- Semicolon-separated values (European CSV)
+
+**Features:**
+- Numbers are automatically right-aligned
+- Multiline cells (from Excel) are converted to YAML literal style (`|`)
+- Special characters are properly escaped
+- Empty cells are preserved
+
 ### 1) Classic `header/body` structure
 ```yamt
 options:

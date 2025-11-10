@@ -1,6 +1,8 @@
 import {
+  Editor,
   MarkdownPostProcessorContext,
   MarkdownRenderer,
+  Notice,
   Plugin,
 } from "obsidian";
 import {
@@ -11,6 +13,8 @@ import {
   YamtYamlError,
   YamtValidationError,
 } from "./lib";
+import { parseTableData } from "./clipboard";
+import { convertToYamt } from "./converters";
 
 export default class YamtPlugin extends Plugin {
   async onload() {
@@ -53,8 +57,71 @@ export default class YamtPlugin extends Plugin {
         renderYamlError(el, e);
       }
     });
+
+    // Command: Paste table with header
+    this.addCommand({
+      id: 'paste-table-with-header',
+      name: 'Paste table from clipboard (with header)',
+      editorCallback: (editor: Editor) => {
+        pasteTableAsYamt(editor, true);
+      }
+    });
+
+    // Command: Paste table body only
+    this.addCommand({
+      id: 'paste-table-body-only',
+      name: 'Paste table from clipboard (body only)',
+      editorCallback: (editor: Editor) => {
+        pasteTableAsYamt(editor, false);
+      }
+    });
   }
 }
+
+/** === Clipboard Table Paste === */
+
+/**
+ * Pastes table data from clipboard as YAMT format.
+ * Reads clipboard text, parses table structure, converts to YAMT, and inserts at cursor.
+ * 
+ * @param editor - Obsidian editor instance
+ * @param withHeader - If true, first row becomes header section
+ */
+async function pasteTableAsYamt(editor: Editor, withHeader: boolean): Promise<void> {
+  try {
+    // Read text from clipboard
+    const clipboardText = await navigator.clipboard.readText();
+    
+    if (!clipboardText.trim()) {
+      new Notice('Clipboard is empty');
+      return;
+    }
+
+    // Parse table data
+    const rows = parseTableData(clipboardText);
+    
+    if (rows.length === 0) {
+      new Notice('No table data found in clipboard');
+      return;
+    }
+
+    // Convert to YAMT format
+    const yamtText = convertToYamt(rows, withHeader);
+
+    // Insert at current cursor position
+    const cursor = editor.getCursor();
+    editor.replaceRange(yamtText, cursor);
+    
+    new Notice(`Table inserted: ${rows.length} rows, ${rows[0]?.length ?? 0} columns`);
+    
+  } catch (error) {
+    console.error('YAMT paste error:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    new Notice(`Error pasting table: ${message}`);
+  }
+}
+
+/** === Table Rendering === */
 
 /**
  * Renders a single table row with all its cells.
