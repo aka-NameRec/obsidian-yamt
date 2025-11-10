@@ -54,11 +54,20 @@ or even without the `rows` key, just a plain matrix:
 - `align: left|center|right`
 - `bg`, `color` — any CSS values (use carefully)
 - `colspan`, `rowspan` (+ synonyms `hts_colspan`, `hts_rowspan`)
+- `width` — column width (CSS value: px, %, em, etc.)
 - markdown inside `data`
 
 Cell example:
 ```yaml
 { data: "**Bold** and `code`", align: center, bg: "#1112", color: "var(--text-normal)" }
+```
+
+Width example (typically used in header cells):
+```yaml
+header:
+  - [ { data: "ID", width: "50px" }, { data: "Description", width: "60%" }, { data: "Status" } ]
+body:
+  - [ "1", "Lorem ipsum dolor sit amet", "✓" ]
 ```
 
 ## Diagnostics

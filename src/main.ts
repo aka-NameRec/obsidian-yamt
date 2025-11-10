@@ -96,6 +96,11 @@ async function renderRow(
       el.style.backgroundColor = cell.bg;
     }
 
+    // Apply width (typically for header cells to control column width)
+    if (cell.width) {
+      el.style.width = cell.width;
+    }
+
     // Render markdown content
     const inner = el.createDiv();
     await MarkdownRenderer.renderMarkdown(cell.data, inner, ctx.sourcePath, ctx);
