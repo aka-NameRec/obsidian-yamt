@@ -1,4 +1,6 @@
 import {
+  App,
+  Component,
   Editor,
   MarkdownPostProcessorContext,
   MarkdownRenderer,
@@ -20,7 +22,7 @@ export default class YamtPlugin extends Plugin {
   async onload() {
     // Register processor for ```yamt code blocks (original syntax)
     this.registerMarkdownCodeBlockProcessor("yamt", async (source, el, ctx) => {
-      await renderYamtFromSource(source, el, ctx);
+      await renderYamtFromSource(this.app, source, el, ctx, this);
     });
 
     // Register processor for ```yaml blocks with # -yamt- comment marker
@@ -34,7 +36,7 @@ export default class YamtPlugin extends Plugin {
       
       if (isYamtMarker) {
         // This is a YAMT table! Render it as table
-        await renderYamtFromSource(source, el, ctx);
+        await renderYamtFromSource(this.app, source, el, ctx, this);
       } else {
         // Regular YAML block - render as code block with syntax highlighting
         const pre = el.createEl('pre');
@@ -110,16 +112,20 @@ async function pasteTableAsYamt(editor: Editor, withHeader: boolean): Promise<vo
 
 /**
  * Renders YAMT table from YAML source code.
- * Used by both ```yamt blocks and <!-- yamt --> + ```yaml blocks.
+ * Used by both ```yamt blocks and ```yaml blocks with # -yamt- marker.
  * 
+ * @param app - Obsidian app instance
  * @param source - YAML source code
  * @param el - Container element to render into
  * @param ctx - Markdown processor context
+ * @param component - Component for lifecycle management
  */
 async function renderYamtFromSource(
+  app: App,
   source: string,
   el: HTMLElement,
-  ctx: MarkdownPostProcessorContext
+  ctx: MarkdownPostProcessorContext,
+  component: Component
 ): Promise<void> {
   try {
     const doc = parseYamlAny(source);
@@ -145,14 +151,14 @@ async function renderYamtFromSource(
     if (!noThead && model.header?.length) {
       const thead = table.createEl("thead");
       for (const row of model.header) {
-        await renderRow(thead, row, true, ctx);
+        await renderRow(app, thead, row, true, ctx, component);
       }
     }
 
     if (model.body?.length) {
       const tbody = table.createEl("tbody");
       for (const row of model.body) {
-        await renderRow(tbody, row, false, ctx);
+        await renderRow(app, tbody, row, false, ctx, component);
       }
     }
   } catch (e: unknown) {
@@ -166,16 +172,20 @@ async function renderYamtFromSource(
  * Renders a single table row with all its cells.
  * Applies cell attributes (colspan, rowspan, alignment, colors) and renders markdown content.
  * 
+ * @param app - Obsidian app instance
  * @param parent - Parent HTML element (thead or tbody)
  * @param row - Array of normalized cells to render
  * @param isHeader - True if rendering header cells (th), false for body cells (td)
  * @param ctx - Obsidian markdown processor context
+ * @param component - Component for lifecycle management
  */
 async function renderRow(
+  app: App,
   parent: HTMLElement,
   row: Row,
   isHeader: boolean,
-  ctx: MarkdownPostProcessorContext
+  ctx: MarkdownPostProcessorContext,
+  component: Component
 ) {
   const tr = parent.createEl("tr");
   for (const cell of row) {
@@ -209,7 +219,7 @@ async function renderRow(
 
     // Render markdown content
     const inner = el.createDiv();
-    await MarkdownRenderer.renderMarkdown(cell.data, inner, ctx.sourcePath, ctx);
+    await MarkdownRenderer.render(app, cell.data, inner, ctx.sourcePath, component);
   }
 }
 
