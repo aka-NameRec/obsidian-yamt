@@ -13,6 +13,37 @@ Render tables from YAML in Obsidian.
 
 ## Usage
 
+### Two Ways to Write YAMT Tables
+
+YAMT supports two syntaxes for defining tables:
+
+#### Option 1: `yamt` code blocks (original syntax)
+```yamt
+header:
+  - [ "Name", "Age" ]
+body:
+  - [ "Alice", "30" ]
+```
+
+**Limitation:** No YAML syntax highlighting in editor.
+
+#### Option 2: YAML comment marker (recommended)
+```yaml
+# -yamt-
+header:
+  - [ "Name", "Age" ]
+body:
+  - [ "Alice", "30" ]
+```
+
+**Benefits:**
+- ✅ Full YAML syntax highlighting in editor
+- ✅ Valid YAML syntax (comment doesn't affect parsing)
+- ✅ Marker is part of the code block (no separate line needed)
+- ✅ Standard YAML formatting and validation
+
+Place the comment `# -yamt-` as the first line in your `yaml` code block.
+
 ### Paste from Clipboard
 
 YAMT provides commands to quickly convert tables from Excel, LibreOffice Writer, or CSV format directly from your clipboard:

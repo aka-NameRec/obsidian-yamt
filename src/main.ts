@@ -18,43 +18,28 @@ import { convertToYamt } from "./converters";
 
 export default class YamtPlugin extends Plugin {
   async onload() {
+    // Register processor for ```yamt code blocks (original syntax)
     this.registerMarkdownCodeBlockProcessor("yamt", async (source, el, ctx) => {
-      try {
-        const doc = parseYamlAny(source);
-        const model = normalizeToModel(doc);
+      await renderYamtFromSource(source, el, ctx);
+    });
 
-        if (!model.header?.length && !model.body?.length) {
-          throw new YamtValidationError(
-            "No table rows detected (header/body are empty)."
-          );
-        }
-
-        const table = el.createEl("table", { cls: "yamt-table" });
-        if (model.options?.ariaLabel) table.setAttr("aria-label", model.options.ariaLabel);
-
-        // caption (optional)
-        if (model.options?.caption) {
-          const cap = table.createEl("caption");
-          cap.textContent = model.options.caption;
-        }
-
-        const noThead = !!model.options?.noThead;
-
-        if (!noThead && model.header?.length) {
-          const thead = table.createEl("thead");
-          for (const row of model.header) {
-            await renderRow(thead, row, true, ctx);
-          }
-        }
-
-        if (model.body?.length) {
-          const tbody = table.createEl("tbody");
-          for (const row of model.body) {
-            await renderRow(tbody, row, false, ctx);
-          }
-        }
-      } catch (e: unknown) {
-        renderYamlError(el, e);
+    // Register processor for ```yaml blocks with # -yamt- comment marker
+    this.registerMarkdownCodeBlockProcessor("yaml", async (source, el, ctx) => {
+      // Check if first line is a YAML comment with -yamt- marker
+      const lines = source.split('\n');
+      const firstLine = lines[0]?.trim() || '';
+      
+      // Check for YAML comment: # -yamt- or #-yamt-
+      const isYamtMarker = firstLine === '# -yamt-' || firstLine === '#-yamt-';
+      
+      if (isYamtMarker) {
+        // This is a YAMT table! Render it as table
+        await renderYamtFromSource(source, el, ctx);
+      } else {
+        // Regular YAML block - render as code block with syntax highlighting
+        const pre = el.createEl('pre');
+        const code = pre.createEl('code', { cls: 'language-yaml' });
+        code.textContent = source;
       }
     });
 
@@ -118,6 +103,60 @@ async function pasteTableAsYamt(editor: Editor, withHeader: boolean): Promise<vo
     console.error('YAMT paste error:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
     new Notice(`Error pasting table: ${message}`);
+  }
+}
+
+/** === YAMT Rendering === */
+
+/**
+ * Renders YAMT table from YAML source code.
+ * Used by both ```yamt blocks and <!-- yamt --> + ```yaml blocks.
+ * 
+ * @param source - YAML source code
+ * @param el - Container element to render into
+ * @param ctx - Markdown processor context
+ */
+async function renderYamtFromSource(
+  source: string,
+  el: HTMLElement,
+  ctx: MarkdownPostProcessorContext
+): Promise<void> {
+  try {
+    const doc = parseYamlAny(source);
+    const model = normalizeToModel(doc);
+
+    if (!model.header?.length && !model.body?.length) {
+      throw new YamtValidationError(
+        "No table rows detected (header/body are empty)."
+      );
+    }
+
+    const table = el.createEl("table", { cls: "yamt-table" });
+    if (model.options?.ariaLabel) table.setAttr("aria-label", model.options.ariaLabel);
+
+    // caption (optional)
+    if (model.options?.caption) {
+      const cap = table.createEl("caption");
+      cap.textContent = model.options.caption;
+    }
+
+    const noThead = !!model.options?.noThead;
+
+    if (!noThead && model.header?.length) {
+      const thead = table.createEl("thead");
+      for (const row of model.header) {
+        await renderRow(thead, row, true, ctx);
+      }
+    }
+
+    if (model.body?.length) {
+      const tbody = table.createEl("tbody");
+      for (const row of model.body) {
+        await renderRow(tbody, row, false, ctx);
+      }
+    }
+  } catch (e: unknown) {
+    renderYamlError(el, e);
   }
 }
 
