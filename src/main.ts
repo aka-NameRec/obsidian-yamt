@@ -27,6 +27,14 @@ export default class YamtPlugin extends Plugin {
 
     // Register processor for ```yaml blocks with # -yamt- comment marker
     this.registerMarkdownCodeBlockProcessor("yaml", async (source, el, ctx) => {
+      // Skip frontmatter - check if parent has frontmatter class
+      // Frontmatter should not be rendered in reading view
+      if (el.parentElement?.hasClass('frontmatter') || 
+          el.parentElement?.hasClass('mod-frontmatter')) {
+        // This is frontmatter - don't render anything (Obsidian hides it by default)
+        return;
+      }
+      
       // Check if first line is a YAML comment with -yamt- marker
       const lines = source.split('\n');
       const firstLine = lines[0]?.trim() || '';
