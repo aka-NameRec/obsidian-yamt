@@ -145,5 +145,5 @@ You are free to use, modify, and distribute this software for any purpose, comme
 
 **aka.NameRec@gmail.com**
 
-- GitHub: https://github.com/shtirliz/obsidian-yamt
-- Issues: https://github.com/shtirliz/obsidian-yamt/issues
+- GitHub: https://github.com/aka-NameRec/obsidian-yamt
+- Issues: https://github.com/aka-NameRec/obsidian-yamt/issues

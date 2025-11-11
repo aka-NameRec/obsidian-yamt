@@ -5,6 +5,6 @@
   "minAppVersion": "1.5.0",
   "description": "Render tables from YAML with colspan/rowspan, alignment, colors, markdown-in-cells, captions, and flexible header control.",
   "author": "aka.NameRec@gmail.com",
-  "authorUrl": "https://github.com/shtirliz",
+  "authorUrl": "https://github.com/aka-NameRec",
   "isDesktopOnly": false
 }
