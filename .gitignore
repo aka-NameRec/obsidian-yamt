@@ -30,3 +30,5 @@ coverage/
 # ConPort database (context management)
 context_portal/
 
+# Local installation scripts
+install

@@ -106,7 +106,8 @@ or even without the `rows` key, just a plain matrix:
 ```
 
 ### 3) Cells and Styles
-- `align: left|center|right`
+- `align: left|center|right` — alignment for this cell only
+- `colalign: left|center|right` — defines alignment for entire column (used in header cells)
 - `bg`, `color` — any CSS values (use carefully)
 - `colspan`, `rowspan` (+ synonyms `hts_colspan`, `hts_rowspan`)
 - `width` — column width (CSS value: px, %, em, etc.)
@@ -124,6 +125,50 @@ header:
 body:
   - [ "1", "Lorem ipsum dolor sit amet", "✓" ]
 ```
+
+### 4) Column Alignment with `colalign`
+
+The `colalign` attribute in header cells defines alignment for the entire column:
+
+**Basic example:**
+```yaml
+# -yamt-
+header:
+  - [ 
+      { data: "Name", colalign: left },
+      { data: "Price", colalign: right },
+      { data: "Status", colalign: center }
+    ]
+body:
+  - [ "Product A", "1299", "✓" ]
+  - [ "Product B", "899", "✗" ]
+```
+
+**With colspan/rowspan:**
+```yaml
+# -yamt-
+header:
+  - [ 
+      { data: "ID", rowspan: 2, colalign: center },
+      { data: "Product Info", colspan: 2, colalign: left },
+      { data: "Metrics", colspan: 2, colalign: right }
+    ]
+  - [ 
+      { data: "Category" },  # Inherits left from "Product Info"
+      { data: "Name" },      # Inherits left
+      { data: "Price" },     # Inherits right from "Metrics"
+      { data: "Stock" }      # Inherits right
+    ]
+body:
+  - [ "1", "Electronics", "Laptop", "1299", "5" ]
+  - [ "2", "Books", "Clean Code", "42", "100" ]
+```
+
+**Priority:** `align` (cell-specific) > `colalign` (column-wide) > browser default
+
+**Key differences:**
+- `align`: affects only this cell, not inherited
+- `colalign`: affects this cell AND all body cells in the same column
 
 ## Diagnostics
 - YAML errors are displayed with precise location (line/column) when possible.

@@ -12,6 +12,7 @@ import {
   normalizeToModel,
   NormalizedCell,
   Row,
+  Align,
   YamtYamlError,
   YamtValidationError,
 } from "./lib";
@@ -156,17 +157,17 @@ async function renderYamtFromSource(
 
     const noThead = !!model.options?.noThead;
 
+    // Render header with progressive column alignment tracking
+    let columnAlignments: (Align | undefined)[] = [];
     if (!noThead && model.header?.length) {
       const thead = table.createEl("thead");
-      for (const row of model.header) {
-        await renderRow(app, thead, row, true, ctx, component);
-      }
+      columnAlignments = await renderHeaderRows(app, thead, model.header, ctx, component);
     }
 
     if (model.body?.length) {
       const tbody = table.createEl("tbody");
       for (const row of model.body) {
-        await renderRow(app, tbody, row, false, ctx, component);
+        await renderRow(app, tbody, row, false, ctx, component, columnAlignments);
       }
     }
   } catch (e: unknown) {
@@ -175,6 +176,79 @@ async function renderYamtFromSource(
 }
 
 /** === Table Rendering === */
+
+/**
+ * Renders header rows with progressive column alignment tracking.
+ * Each row can inherit colalign from previous rows and define it for subsequent rows.
+ * 
+ * @param app - Obsidian app instance
+ * @param thead - Table header element
+ * @param headerRows - Array of header rows to render
+ * @param ctx - Obsidian markdown processor context
+ * @param component - Component for lifecycle management
+ * @returns Final column alignments after processing all header rows
+ */
+async function renderHeaderRows(
+  app: App,
+  thead: HTMLElement,
+  headerRows: Row[],
+  ctx: MarkdownPostProcessorContext,
+  component: Component
+): Promise<(Align | undefined)[]> {
+  const columnAlignments: (Align | undefined)[] = [];
+  
+  // Track occupied columns across rows
+  const occupiedColumns: Map<number, number>[] = [];
+  
+  for (let rowIndex = 0; rowIndex < headerRows.length; rowIndex++) {
+    const row = headerRows[rowIndex];
+    occupiedColumns[rowIndex] = new Map();
+    
+    // Copy occupied columns from previous row (decrementing the counter)
+    if (rowIndex > 0) {
+      const prevOccupied = occupiedColumns[rowIndex - 1];
+      for (const [colIndex, remainingRows] of prevOccupied.entries()) {
+        if (remainingRows > 1) {
+          occupiedColumns[rowIndex].set(colIndex, remainingRows - 1);
+        }
+      }
+    }
+    
+    // Render the row with current columnAlignments and occupied columns info
+    await renderRow(app, thead, row, true, ctx, component, columnAlignments, occupiedColumns[rowIndex]);
+    
+    // Update columnAlignments based on this row's colalign values
+    let currentColumnIndex = 0;
+    for (const cell of row) {
+      // Skip occupied columns
+      while (occupiedColumns[rowIndex].has(currentColumnIndex)) {
+        currentColumnIndex++;
+      }
+      
+      const colspan = cell.colspan || 1;
+      const rowspan = cell.rowspan || 1;
+      const colalign = cell.colalign;
+      
+      // Update alignments for all columns covered by this cell
+      if (colalign) {
+        for (let i = 0; i < colspan; i++) {
+          columnAlignments[currentColumnIndex + i] = colalign;
+        }
+      }
+      
+      // Mark columns as occupied if rowspan > 1
+      if (rowspan > 1) {
+        for (let i = 0; i < colspan; i++) {
+          occupiedColumns[rowIndex].set(currentColumnIndex + i, rowspan);
+        }
+      }
+      
+      currentColumnIndex += colspan;
+    }
+  }
+  
+  return columnAlignments;
+}
 
 /**
  * Renders a single table row with all its cells.
@@ -186,6 +260,8 @@ async function renderYamtFromSource(
  * @param isHeader - True if rendering header cells (th), false for body cells (td)
  * @param ctx - Obsidian markdown processor context
  * @param component - Component for lifecycle management
+ * @param columnAlignments - Optional array of column alignments from header
+ * @param occupiedColumns - Optional map of columns occupied by rowspan from previous rows
  */
 async function renderRow(
   app: App,
@@ -193,10 +269,21 @@ async function renderRow(
   row: Row,
   isHeader: boolean,
   ctx: MarkdownPostProcessorContext,
-  component: Component
+  component: Component,
+  columnAlignments?: (Align | undefined)[] | null,
+  occupiedColumns?: Map<number, number>
 ) {
   const tr = parent.createEl("tr");
+  let currentColumnIndex = 0;
+  
   for (const cell of row) {
+    // Skip columns occupied by rowspan from previous rows
+    if (occupiedColumns) {
+      while (occupiedColumns.has(currentColumnIndex)) {
+        currentColumnIndex++;
+      }
+    }
+    
     const el = tr.createEl(isHeader ? "th" : "td");
 
     // Apply colspan and rowspan attributes
@@ -207,9 +294,24 @@ async function renderRow(
       el.setAttr("rowspan", String(cell.rowspan));
     }
 
-    // Apply alignment
-    if (cell.align) {
-      el.style.textAlign = cell.align;
+    // Apply alignment with priority:
+    // 1. cell.align (highest priority)
+    // 2. cell.colalign (defines alignment for this cell and column)
+    // 3. colalign from previous header rows (inheritance within header)
+    // 4. browser default
+    let effectiveAlign = cell.align;
+    if (!effectiveAlign) {
+      if (cell.colalign) {
+        // Use cell's own colalign
+        effectiveAlign = cell.colalign;
+      } else if (columnAlignments && columnAlignments.length > currentColumnIndex) {
+        // Use colalign from header (for body cells or header cells inheriting from previous rows)
+        effectiveAlign = columnAlignments[currentColumnIndex];
+      }
+    }
+    
+    if (effectiveAlign) {
+      el.style.textAlign = effectiveAlign;
     }
 
     // Apply colors
@@ -228,6 +330,9 @@ async function renderRow(
     // Render markdown content
     const inner = el.createDiv();
     await MarkdownRenderer.render(app, cell.data, inner, ctx.sourcePath, component);
+    
+    // Update column index
+    currentColumnIndex += (cell.colspan || 1);
   }
 }
 
