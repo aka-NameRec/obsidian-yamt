@@ -1,9 +1,9 @@
 {
   "id": "yamt",
   "name": "YAMT (Yet Another Markdown Table)",
-  "version": "0.2.0",
+  "version": "1.2.20251111",
   "minAppVersion": "1.5.0",
-  "description": "Render tables from YAML with colspan/rowspan, alignment, colors, markdown-in-cells, captions, and flexible header control.",
+  "description": "Render tables from YAML with colspan/rowspan, alignment (including column-wide colalign), colors, markdown-in-cells, captions, and flexible header control.",
   "author": "aka.NameRec@gmail.com",
   "authorUrl": "https://github.com/aka-NameRec",
   "isDesktopOnly": false
