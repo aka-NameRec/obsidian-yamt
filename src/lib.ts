@@ -22,6 +22,8 @@ export interface NormalizedCell {
   rowspan?: number;
   /** Column width (CSS value: px, %, em, etc.) */
   width?: string;
+  /** Column alignment (defines alignment for entire column in table body) */
+  colalign?: Align;
 }
 
 /**
@@ -41,6 +43,7 @@ export type RawCell =
             colspan?: number | string;
             rowspan?: number | string;
             width?: string;
+            colalign?: Align;
             /** synonyms */
             hts_colspan?: number | string;
             hts_rowspan?: number | string;
@@ -52,6 +55,7 @@ export type RawCell =
       colspan?: number | string;
       rowspan?: number | string;
       width?: string;
+      colalign?: Align;
       hts_colspan?: number | string;
       hts_rowspan?: number | string;
     };
@@ -281,6 +285,7 @@ export function normalizeCellObject(obj: Record<string, any>): NormalizedCell {
   if (colspan != null) out.colspan = toInt(colspan);
   if (rowspan != null) out.rowspan = toInt(rowspan);
   if (obj.align && ["left","center","right"].includes(obj.align)) out.align = obj.align as Align;
+  if (obj.colalign && ["left","center","right"].includes(obj.colalign)) out.colalign = obj.colalign as Align;
   if (obj.color) out.color = String(obj.color);
   if (obj.bg) out.bg = String(obj.bg);
   if (obj.width) out.width = String(obj.width);
