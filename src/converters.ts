@@ -9,6 +9,7 @@ export interface ImportOptions {
   withHeader: boolean;
   importAlignment: boolean;
   promoteStylesToHeader: boolean;
+  wrapInBlock: boolean;
 }
 
 interface ParsedCell {
@@ -30,7 +31,7 @@ export function convertToYamt(
   optionsOrHeader: boolean | ImportOptions
 ): string {
   const opts: ImportOptions = typeof optionsOrHeader === 'boolean'
-    ? { withHeader: optionsOrHeader, importAlignment: true, promoteStylesToHeader: false }
+    ? { withHeader: optionsOrHeader, importAlignment: true, promoteStylesToHeader: false, wrapInBlock: true }
     : optionsOrHeader;
 
   const parsedRows = rows.map(row => row.map(cell => parseCell(cell, opts.importAlignment)));
@@ -43,10 +44,10 @@ export function convertToYamt(
       promoteColumnAlignments(headerCells, bodyRows);
     }
 
-    return buildYamtBlock(headerCells, bodyRows);
+    return buildYamtBlock(headerCells, bodyRows, false, opts.wrapInBlock);
   }
 
-  return buildYamtBlock(null, parsedRows);
+  return buildYamtBlock(null, parsedRows, true, opts.wrapInBlock);
 }
 
 function parseCell(raw: string, importAlignment: boolean): ParsedCell {
@@ -118,11 +119,15 @@ function promoteColumnAlignments(
 
 function buildYamtBlock(
   headerCells: ParsedCell[] | null,
-  bodyRows: ParsedCell[][]
+  bodyRows: ParsedCell[][],
+  flatMode: boolean,
+  wrapInBlock: boolean
 ): string {
   const lines: string[] = [];
 
-  lines.push('```yamt');
+  if (wrapInBlock) {
+    lines.push('```yamt');
+  }
 
   if (headerCells) {
     lines.push('header:');
@@ -130,13 +135,22 @@ function buildYamtBlock(
   }
 
   if (bodyRows.length > 0) {
-    lines.push('body:');
-    for (const row of bodyRows) {
-      lines.push(...formatRow(row, '  '));
+    if (!flatMode) {
+      lines.push('body:');
+      for (const row of bodyRows) {
+        lines.push(...formatRow(row, '  '));
+      }
+    } else {
+      for (const row of bodyRows) {
+        lines.push(...formatRow(row, ''));
+      }
     }
   }
 
-  lines.push('```');
+  if (wrapInBlock) {
+    lines.push('```');
+  }
+
   lines.push('');
 
   return lines.join('\n');

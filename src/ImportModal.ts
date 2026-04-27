@@ -6,11 +6,13 @@ export const DEFAULT_IMPORT_OPTIONS: ImportOptions = {
   withHeader: false,
   importAlignment: true,
   promoteStylesToHeader: true,
+  wrapInBlock: true,
 };
 
 export class ImportModal extends Modal {
   private readonly opts: ImportOptions;
   private readonly onConfirm: (opts: ImportOptions) => void;
+  private promoteSettingEl!: HTMLElement;
 
   constructor(
     app: App,
@@ -22,7 +24,7 @@ export class ImportModal extends Modal {
     this.onConfirm = onConfirm;
   }
 
-  override onOpen(): void {
+  onOpen(): void {
     const { contentEl } = this;
     contentEl.empty();
 
@@ -36,6 +38,10 @@ export class ImportModal extends Modal {
           .setValue(this.opts.withHeader)
           .onChange(val => {
             this.opts.withHeader = val;
+            if (!val) {
+              this.opts.promoteStylesToHeader = false;
+            }
+            this.updatePromoteState();
           });
       });
 
@@ -64,6 +70,20 @@ export class ImportModal extends Modal {
           });
       });
 
+    this.promoteSettingEl = contentEl.lastElementChild as HTMLElement;
+    this.updatePromoteState();
+
+    new Setting(contentEl)
+      .setName('Wrap in YAMT block')
+      .setDesc('Surround output with ```yamt code fences')
+      .addToggle(toggle => {
+        toggle
+          .setValue(this.opts.wrapInBlock)
+          .onChange(val => {
+            this.opts.wrapInBlock = val;
+          });
+      });
+
     new Setting(contentEl)
       .addButton(btn => {
         btn
@@ -81,10 +101,26 @@ export class ImportModal extends Modal {
             this.close();
           });
       });
+
+    this.scope.register([], 'Enter', () => {
+      this.onConfirm(this.opts);
+      this.close();
+      return false;
+    });
   }
 
-  override onClose(): void {
+  onClose(): void {
     const { contentEl } = this;
     contentEl.empty();
+  }
+
+  private updatePromoteState(): void {
+    const disabled = !this.opts.withHeader;
+    this.promoteSettingEl.toggleClass('is-disabled', disabled);
+    const toggle = this.promoteSettingEl.querySelector('input[type="checkbox"]') as HTMLInputElement | null;
+    if (toggle) {
+      toggle.disabled = disabled;
+      toggle.checked = this.opts.promoteStylesToHeader;
+    }
   }
 }

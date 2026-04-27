@@ -26,12 +26,14 @@ interface YamtSettings {
   withHeader: boolean;
   importAlignment: boolean;
   promoteStylesToHeader: boolean;
+  wrapInBlock: boolean;
 }
 
 const DEFAULT_SETTINGS: YamtSettings = {
   withHeader: DEFAULT_IMPORT_OPTIONS.withHeader,
   importAlignment: DEFAULT_IMPORT_OPTIONS.importAlignment,
   promoteStylesToHeader: DEFAULT_IMPORT_OPTIONS.promoteStylesToHeader,
+  wrapInBlock: DEFAULT_IMPORT_OPTIONS.wrapInBlock,
 };
 
 export default class YamtPlugin extends Plugin {
@@ -94,6 +96,7 @@ export default class YamtPlugin extends Plugin {
       this.settings.withHeader = opts.withHeader;
       this.settings.importAlignment = opts.importAlignment;
       this.settings.promoteStylesToHeader = opts.promoteStylesToHeader;
+      this.settings.wrapInBlock = opts.wrapInBlock;
       await this.saveSettings();
       await pasteTableAsYamt(editor, opts);
     });
@@ -158,8 +161,9 @@ async function pasteTableAsYamt(editor: Editor, opts: ImportOptions): Promise<vo
 
     const yamtText = convertToYamt(rows, opts);
 
-    const cursor = editor.getCursor();
-    editor.replaceRange(yamtText, cursor);
+    const from = editor.getCursor('from');
+    const to = editor.getCursor('to');
+    editor.replaceRange(yamtText, from, to);
 
     new Notice(`Table inserted: ${rows.length} rows, ${rows[0]?.length ?? 0} columns`);
 

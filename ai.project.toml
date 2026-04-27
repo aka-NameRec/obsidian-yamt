@@ -1,0 +1,39 @@
+ai_standards_version = "1.6.0"
+project_version = "1.2.20251111"
+project_release_date = "2025-11-11"
+
+fragments = [
+  "core/base",
+  "core/git-workflow",
+  "core/architecture",
+  "core/error-handling",
+]
+
+features = [
+  "conport",
+  "design-first-collaboration",
+  "reasoning-hygiene",
+  "autonomy-boundaries",
+  "structured-artifacts",
+  "session-hygiene",
+  "agent-usage-hygiene",
+]
+
+stacks = [
+  "typescript",
+]
+
+local_overrides = [
+  "docs/ai/project-rules.md",
+]
+
+optional_local_overrides = [
+  "docs/ai/private-rules.local.md",
+]
+
+[tooling]
+agents = []
+
+[metadata]
+project_name = "obsidian-yamt"
+notes = "Obsidian plugin for rendering tables from YAML definitions. TypeScript + esbuild + Vitest."

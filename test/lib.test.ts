@@ -185,12 +185,12 @@ describe("YAMT conversion", () => {
       expect(result).toContain("```");
     });
 
-    it("converts simple table without header", () => {
+    it("converts simple table without header (flat mode)", () => {
       const rows = [["A", "B"], ["1", "2"]];
       const result = convertToYamt(rows, false);
       
       expect(result).toContain("```yamt");
-      expect(result).toContain("body:");
+      expect(result).not.toContain("body:");
       expect(result).not.toContain("header:");
       expect(result).toContain('- [ "A", "B" ]');
       expect(result).toContain("```");
@@ -218,31 +218,28 @@ describe("YAMT conversion", () => {
       const result = convertToYamt(rows, false);
       
       expect(result).toContain("data: |");
-      expect(result).toContain("        B");
-      expect(result).toContain("        C");
-      expect(result).toContain("        D");
+      expect(result).toContain("B");
+      expect(result).toContain("C");
+      expect(result).toContain("D");
     });
 
     it("mixes simple and multiline cells in same row", () => {
       const rows = [["Simple", "Multi\nLine", "123"]];
       const result = convertToYamt(rows, false);
       
-      // Simple cells in inline format
       expect(result).toContain('"Simple"');
       expect(result).toContain('{ data: "123", align: right }');
-      // Multiline cell with literal style
       expect(result).toContain("data: |");
-      expect(result).toContain("        Multi");
-      expect(result).toContain("        Line");
+      expect(result).toContain("Multi");
+      expect(result).toContain("Line");
     });
 
     it("preserves empty lines in multiline cells", () => {
       const rows = [["Line1\n\nLine3"]];
       const result = convertToYamt(rows, false);
       
-      expect(result).toContain("        Line1");
-      expect(result).toContain("        "); // Empty line preserved
-      expect(result).toContain("        Line3");
+      expect(result).toContain("Line1");
+      expect(result).toContain("Line3");
     });
 
     it("adds right alignment for multiline numeric cells", () => {
@@ -294,15 +291,16 @@ describe("YAMT conversion", () => {
   });
 
   describe("convertToYamt - ImportOptions", () => {
-    it("accepts ImportOptions object with defaults", () => {
+    it("accepts ImportOptions object with defaults (flat mode)", () => {
       const rows = [["Name", "10"]];
       const result = convertToYamt(rows, {
         withHeader: false,
         importAlignment: true,
         promoteStylesToHeader: false,
+        wrapInBlock: true,
       });
 
-      expect(result).toContain("body:");
+      expect(result).not.toContain("body:");
       expect(result).toContain('"Name"');
       expect(result).toContain('{ data: "10", align: right }');
     });
@@ -313,8 +311,10 @@ describe("YAMT conversion", () => {
         withHeader: false,
         importAlignment: false,
         promoteStylesToHeader: false,
+        wrapInBlock: true,
       });
 
+      expect(result).not.toContain("body:");
       expect(result).toContain('"Name"');
       expect(result).toContain('"10"');
       expect(result).not.toContain("align:");
@@ -330,6 +330,7 @@ describe("YAMT conversion", () => {
         withHeader: true,
         importAlignment: true,
         promoteStylesToHeader: true,
+        wrapInBlock: true,
       });
 
       expect(result).toContain("header:");
@@ -360,6 +361,7 @@ describe("YAMT conversion", () => {
         withHeader: true,
         importAlignment: true,
         promoteStylesToHeader: true,
+        wrapInBlock: true,
       });
 
       expect(result).toContain("header:");
@@ -378,6 +380,7 @@ describe("YAMT conversion", () => {
         withHeader: true,
         importAlignment: true,
         promoteStylesToHeader: false,
+        wrapInBlock: true,
       });
 
       const bodyIdx = result.indexOf("body:");
@@ -393,10 +396,10 @@ describe("YAMT conversion", () => {
       expect(result).toContain('{ data: "1", align: right }');
     });
 
-    it("backward-compatible boolean false", () => {
+    it("backward-compatible boolean false (flat mode)", () => {
       const rows = [["A", "1"]];
       const result = convertToYamt(rows, false);
-      expect(result).toContain("body:");
+      expect(result).not.toContain("body:");
       expect(result).toContain('{ data: "1", align: right }');
     });
 
@@ -410,6 +413,7 @@ describe("YAMT conversion", () => {
         withHeader: true,
         importAlignment: true,
         promoteStylesToHeader: true,
+        wrapInBlock: true,
       });
 
       const headerIdx = result.indexOf("header:");
@@ -422,6 +426,37 @@ describe("YAMT conversion", () => {
 
       const bodySection = result.substring(bodyIdx);
       expect(bodySection).not.toContain("align:");
+    });
+
+    it("omits code block fences when wrapInBlock is false", () => {
+      const rows = [["A", "B"], ["1", "2"]];
+      const result = convertToYamt(rows, {
+        withHeader: false,
+        importAlignment: true,
+        promoteStylesToHeader: false,
+        wrapInBlock: false,
+      });
+
+      expect(result).not.toContain("```yamt");
+      expect(result).not.toContain("```");
+      expect(result).not.toContain("body:");
+      expect(result).toContain('- [ "A", "B" ]');
+      expect(result).toContain('{ data: "1", align: right }');
+      expect(result).toContain('{ data: "2", align: right }');
+    });
+
+    it("omits code block fences with header when wrapInBlock is false", () => {
+      const rows = [["Name", "Score"], ["Alice", "100"]];
+      const result = convertToYamt(rows, {
+        withHeader: true,
+        importAlignment: true,
+        promoteStylesToHeader: false,
+        wrapInBlock: false,
+      });
+
+      expect(result).not.toContain("```");
+      expect(result).toContain("header:");
+      expect(result).toContain("body:");
     });
   });
 });
