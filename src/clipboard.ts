@@ -115,3 +115,4 @@ export function isNumber(str: string): boolean {
   return /^-?\d+([.,]\d+)?$/.test(cleaned);
 }
 
+

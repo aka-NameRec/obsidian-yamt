@@ -5,171 +5,212 @@
 
 import { isNumber } from './clipboard';
 
-/**
- * Converts 2D array of cells to YAMT code block.
- * 
- * @param rows - Parsed table rows
- * @param withHeader - If true, first row becomes header section
- * @returns YAMT formatted string ready to insert
- */
-export function convertToYamt(rows: string[][], withHeader: boolean): string {
-  const lines: string[] = [];
-  
-  lines.push('```yamt');
-  
-  if (withHeader && rows.length > 0) {
-    // First row as header
-    lines.push('header:');
-    lines.push(...formatYamtRowWithIndent(rows[0], '  '));
-    
-    if (rows.length > 1) {
-      lines.push('body:');
-      for (let i = 1; i < rows.length; i++) {
-        lines.push(...formatYamtRowWithIndent(rows[i], '  '));
-      }
-    }
-  } else {
-    // All rows as body
-    lines.push('body:');
-    for (const row of rows) {
-      lines.push(...formatYamtRowWithIndent(row, '  '));
-    }
-  }
-  
-  lines.push('```');
-  lines.push(''); // Empty line after block
-  
-  return lines.join('\n');
+export interface ImportOptions {
+  withHeader: boolean;
+  importAlignment: boolean;
+  promoteStylesToHeader: boolean;
+}
+
+interface ParsedCell {
+  data: string;
+  align?: 'left' | 'center' | 'right';
+  colalign?: 'left' | 'center' | 'right';
+  isMultiline: boolean;
 }
 
 /**
- * Formats a table row for YAMT with proper indentation.
- * Handles multiline cells using YAML literal style.
- * 
- * @param cells - Array of cell values
- * @param baseIndent - Base indentation for this row (e.g., '  ')
- * @returns Array of lines (may be multiple for multiline cells)
+ * Converts 2D array of cells to YAMT code block.
+ *
+ * @param rows - Parsed table rows
+ * @param optionsOrHeader - ImportOptions object, or a boolean for backward compatibility
+ * @returns YAMT formatted string ready to insert
  */
-function formatYamtRowWithIndent(cells: string[], baseIndent: string): string[] {
-  const hasMultiline = cells.some(cell => cell.includes('\n'));
-  
-  if (!hasMultiline) {
-    // Simple inline format: - [ "A", "B", "C" ]
-    const formattedCells = cells.map(cell => formatSimpleCell(cell));
-    return [`${baseIndent}- [ ${formattedCells.join(', ')} ]`];
+export function convertToYamt(
+  rows: string[][],
+  optionsOrHeader: boolean | ImportOptions
+): string {
+  const opts: ImportOptions = typeof optionsOrHeader === 'boolean'
+    ? { withHeader: optionsOrHeader, importAlignment: true, promoteStylesToHeader: false }
+    : optionsOrHeader;
+
+  const parsedRows = rows.map(row => row.map(cell => parseCell(cell, opts.importAlignment)));
+
+  if (opts.withHeader && parsedRows.length > 0) {
+    const headerCells = parsedRows[0];
+    const bodyRows = parsedRows.slice(1);
+
+    if (opts.promoteStylesToHeader && bodyRows.length > 0) {
+      promoteColumnAlignments(headerCells, bodyRows);
+    }
+
+    return buildYamtBlock(headerCells, bodyRows);
   }
-  
-  // Multiline format: each cell on separate line
-  const lines: string[] = [];
-  lines.push(`${baseIndent}- [`);
-  
-  for (let i = 0; i < cells.length; i++) {
-    const cell = cells[i];
-    const isLast = i === cells.length - 1;
-    const comma = isLast ? '' : ',';
-    
-    if (cell.includes('\n')) {
-      // Multiline cell with YAML literal style
-      lines.push(`${baseIndent}    {`);
-      lines.push(`${baseIndent}      data: |`);
-      
-      const cellLines = cell.split('\n');
-      for (const line of cellLines) {
-        lines.push(`${baseIndent}        ${line}`);
+
+  return buildYamtBlock(null, parsedRows);
+}
+
+function parseCell(raw: string, importAlignment: boolean): ParsedCell {
+  const trimmed = raw.trim();
+  const isMultiline = trimmed.includes('\n');
+
+  if (!importAlignment) {
+    return { data: trimmed, isMultiline };
+  }
+
+  if (isMultiline) {
+    const lines = trimmed.split('\n').filter(line => line.trim());
+    if (lines.length > 0 && lines.every(line => isNumber(line))) {
+      return { data: trimmed, align: 'right', isMultiline: true };
+    }
+    return { data: trimmed, isMultiline: true };
+  }
+
+  if (isNumber(trimmed)) {
+    return { data: trimmed, align: 'right', isMultiline: false };
+  }
+
+  return { data: trimmed, isMultiline: false };
+}
+
+/**
+ * For each column: if all body cells share the same alignment,
+ * move it to the header cell as colalign and strip from body cells.
+ */
+function promoteColumnAlignments(
+  headerCells: ParsedCell[],
+  bodyRows: ParsedCell[][]
+): void {
+  const colCount = Math.max(headerCells.length, ...bodyRows.map(r => r.length));
+
+  for (let col = 0; col < colCount; col++) {
+    const bodyAligns = bodyRows
+      .map(row => row[col]?.align)
+      .filter((a): a is 'left' | 'center' | 'right' => a !== undefined);
+
+    if (bodyAligns.length === 0) continue;
+
+    const allSame = bodyAligns.length >= 1
+      && bodyRows.every(row => {
+        const cell = row[col];
+        if (!cell) return true;
+        return cell.align === bodyAligns[0];
+      });
+
+    if (!allSame) continue;
+
+    const commonAlign = bodyAligns[0];
+
+    if (col < headerCells.length && !headerCells[col].isMultiline) {
+      headerCells[col] = {
+        ...headerCells[col],
+        colalign: commonAlign,
+      };
+    }
+
+    for (const row of bodyRows) {
+      if (col < row.length && row[col]) {
+        const { align: _, ...rest } = row[col];
+        row[col] = rest;
       }
-      
-      // Add attributes for multiline cells if applicable
-      const attrs = getCellAttributes(cell);
-      if (attrs.align) {
-        lines.push(`${baseIndent}      , align: ${attrs.align}`);
-      }
-      
-      lines.push(`${baseIndent}    }${comma}`);
-    } else {
-      // Simple cell
-      const formatted = formatSimpleCell(cell);
-      lines.push(`${baseIndent}    ${formatted}${comma}`);
     }
   }
-  
+}
+
+function buildYamtBlock(
+  headerCells: ParsedCell[] | null,
+  bodyRows: ParsedCell[][]
+): string {
+  const lines: string[] = [];
+
+  lines.push('```yamt');
+
+  if (headerCells) {
+    lines.push('header:');
+    lines.push(...formatRow(headerCells, '  '));
+  }
+
+  if (bodyRows.length > 0) {
+    lines.push('body:');
+    for (const row of bodyRows) {
+      lines.push(...formatRow(row, '  '));
+    }
+  }
+
+  lines.push('```');
+  lines.push('');
+
+  return lines.join('\n');
+}
+
+function formatRow(cells: ParsedCell[], baseIndent: string): string[] {
+  const hasMultiline = cells.some(c => c.isMultiline);
+
+  if (!hasMultiline) {
+    const formatted = cells.map(c => formatInlineCell(c));
+    return [`${baseIndent}- [ ${formatted.join(', ')} ]`];
+  }
+
+  const lines: string[] = [];
+  lines.push(`${baseIndent}- [`);
+
+  for (let i = 0; i < cells.length; i++) {
+    const cell = cells[i];
+    const comma = i === cells.length - 1 ? '' : ',';
+
+    if (cell.isMultiline) {
+      lines.push(`${baseIndent}    {`);
+      lines.push(`${baseIndent}      data: |`);
+      for (const cellLine of cell.data.split('\n')) {
+        lines.push(`${baseIndent}        ${cellLine}`);
+      }
+      if (cell.align) {
+        lines.push(`${baseIndent}      , align: ${cell.align}`);
+      }
+      if (cell.colalign) {
+        lines.push(`${baseIndent}      , colalign: ${cell.colalign}`);
+      }
+      lines.push(`${baseIndent}    }${comma}`);
+    } else {
+      lines.push(`${baseIndent}    ${formatInlineCell(cell)}${comma}`);
+    }
+  }
+
   lines.push(`${baseIndent}  ]`);
   return lines;
 }
 
-/**
- * Formats a simple (single-line) cell value.
- * Numbers are formatted with right alignment.
- * 
- * @param cell - Cell value
- * @returns Formatted cell string
- */
-function formatSimpleCell(cell: string): string {
-  const trimmed = cell.trim();
-  
-  // Empty cell
+function formatInlineCell(cell: ParsedCell): string {
+  const trimmed = cell.data.trim();
+
   if (!trimmed) {
     return '""';
   }
-  
-  // Number: add right alignment
-  if (isNumber(trimmed)) {
-    return `{ data: "${escapeYamlString(trimmed)}", align: right }`;
-  }
-  
-  // Regular text: always quote for safety
-  const escaped = escapeYamlString(trimmed);
-  return `"${escaped}"`;
-}
 
-/**
- * Interface for cell attributes determined from content.
- */
-interface CellAttributes {
-  align?: 'left' | 'center' | 'right';
-}
+  const attrs: string[] = [];
+  if (cell.align) attrs.push(`align: ${cell.align}`);
+  if (cell.colalign) attrs.push(`colalign: ${cell.colalign}`);
 
-/**
- * Determines cell attributes based on content.
- * For example, if all non-empty lines are numbers, align right.
- * 
- * @param cell - Cell content (may be multiline)
- * @returns Cell attributes
- */
-function getCellAttributes(cell: string): CellAttributes {
-  const attrs: CellAttributes = {};
-  
-  // Check if all non-empty lines are numbers
-  const lines = cell.split('\n').filter(line => line.trim());
-  if (lines.length > 0 && lines.every(line => isNumber(line))) {
-    attrs.align = 'right';
+  if (attrs.length > 0) {
+    return `{ data: "${escapeYamlString(trimmed)}", ${attrs.join(', ')} }`;
   }
-  
-  return attrs;
+
+  return `"${escapeYamlString(trimmed)}"`;
 }
 
 /**
  * Escapes special characters in YAML string.
  * Only escapes characters needed for quoted strings (not for literal style).
- * 
- * @param str - String to escape
- * @returns Escaped string
  */
 function escapeYamlString(str: string): string {
   return str
-    .replace(/\\/g, '\\\\')  // Backslash
-    .replace(/"/g, '\\"');    // Double quote
-  // Note: \n, \r, \t are NOT escaped - they're handled by literal style |
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"');
 }
 
 /**
  * Checks if a string needs to be quoted in YAML.
  * Returns true for strings with special YAML characters.
- * 
- * @param str - String to check
- * @returns True if quoting is needed
  */
 export function needsQuoting(str: string): boolean {
-  // Check for YAML special characters
   return /[,:\[\]{}#&*!|>'"%@`]|^\s|^\-/.test(str) || str.includes('\\');
 }
-

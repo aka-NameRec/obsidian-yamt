@@ -288,9 +288,140 @@ describe("YAMT conversion", () => {
       const rows = [['Line with "quotes"\nAnd \\backslash']];
       const result = convertToYamt(rows, false);
       
-      // In literal style, no escaping needed
       expect(result).toContain('Line with "quotes"');
       expect(result).toContain('And \\backslash');
+    });
+  });
+
+  describe("convertToYamt - ImportOptions", () => {
+    it("accepts ImportOptions object with defaults", () => {
+      const rows = [["Name", "10"]];
+      const result = convertToYamt(rows, {
+        withHeader: false,
+        importAlignment: true,
+        promoteStylesToHeader: false,
+      });
+
+      expect(result).toContain("body:");
+      expect(result).toContain('"Name"');
+      expect(result).toContain('{ data: "10", align: right }');
+    });
+
+    it("omits alignment when importAlignment is false", () => {
+      const rows = [["Name", "10"]];
+      const result = convertToYamt(rows, {
+        withHeader: false,
+        importAlignment: false,
+        promoteStylesToHeader: false,
+      });
+
+      expect(result).toContain('"Name"');
+      expect(result).toContain('"10"');
+      expect(result).not.toContain("align:");
+    });
+
+    it("promotes uniform column alignment to header", () => {
+      const rows = [
+        ["Product", "Price"],
+        ["Apple", "100"],
+        ["Banana", "200"],
+      ];
+      const result = convertToYamt(rows, {
+        withHeader: true,
+        importAlignment: true,
+        promoteStylesToHeader: true,
+      });
+
+      expect(result).toContain("header:");
+      expect(result).toContain("body:");
+
+      const headerLines = result.split("\n").filter(l => l.includes("header:") || l.includes("body:"));
+      const headerIdx = result.indexOf("header:");
+      const bodyIdx = result.indexOf("body:");
+      const headerSection = result.substring(headerIdx, bodyIdx);
+
+      expect(headerSection).toContain('{ data: "Price", colalign: right }');
+
+      const bodySection = result.substring(bodyIdx);
+      expect(bodySection).toContain('"Apple"');
+      expect(bodySection).toContain('"100"');
+      expect(bodySection).toContain('"Banana"');
+      expect(bodySection).toContain('"200"');
+      expect(bodySection).not.toContain("align:");
+    });
+
+    it("does not promote when body cells have mixed alignment", () => {
+      const rows = [
+        ["Item", "Value"],
+        ["Text", "text_value"],
+        ["Number", "42"],
+      ];
+      const result = convertToYamt(rows, {
+        withHeader: true,
+        importAlignment: true,
+        promoteStylesToHeader: true,
+      });
+
+      expect(result).toContain("header:");
+      expect(result).toContain("body:");
+      expect(result).toContain('{ data: "42", align: right }');
+      expect(result).toContain('"text_value"');
+    });
+
+    it("does not promote when promoteStylesToHeader is false", () => {
+      const rows = [
+        ["Name", "Score"],
+        ["Alice", "100"],
+        ["Bob", "200"],
+      ];
+      const result = convertToYamt(rows, {
+        withHeader: true,
+        importAlignment: true,
+        promoteStylesToHeader: false,
+      });
+
+      const bodyIdx = result.indexOf("body:");
+      const bodySection = result.substring(bodyIdx);
+      expect(bodySection).toContain('{ data: "100", align: right }');
+      expect(bodySection).toContain('{ data: "200", align: right }');
+    });
+
+    it("backward-compatible boolean true", () => {
+      const rows = [["A", "1"]];
+      const result = convertToYamt(rows, true);
+      expect(result).toContain("header:");
+      expect(result).toContain('{ data: "1", align: right }');
+    });
+
+    it("backward-compatible boolean false", () => {
+      const rows = [["A", "1"]];
+      const result = convertToYamt(rows, false);
+      expect(result).toContain("body:");
+      expect(result).toContain('{ data: "1", align: right }');
+    });
+
+    it("promotes only columns where all body cells align the same", () => {
+      const rows = [
+        ["Product", "Qty", "Price"],
+        ["Apple", "10", "100"],
+        ["Banana", "20", "200"],
+      ];
+      const result = convertToYamt(rows, {
+        withHeader: true,
+        importAlignment: true,
+        promoteStylesToHeader: true,
+      });
+
+      const headerIdx = result.indexOf("header:");
+      const bodyIdx = result.indexOf("body:");
+      const headerSection = result.substring(headerIdx, bodyIdx);
+
+      expect(headerSection).toContain('"Product"');
+      expect(headerSection).toContain('{ data: "Qty", colalign: right }');
+      expect(headerSection).toContain('{ data: "Price", colalign: right }');
+
+      const bodySection = result.substring(bodyIdx);
+      expect(bodySection).not.toContain("align:");
     });
   });
 });
