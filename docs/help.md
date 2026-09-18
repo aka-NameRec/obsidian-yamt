@@ -1,3 +1,7 @@
+---
+title: YAMT — Help
+---
+
 # YAMT — Help
 
 YAMT (Yet Another Markdown Table) renders tables from YAML in Obsidian.

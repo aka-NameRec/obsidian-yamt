@@ -1,3 +1,7 @@
+---
+title: "DR-002: Promote repeated column alignments to header cells"
+---
+
 # DR-002: Promote repeated column alignments to header cells
 
 **Date:** 2026-04-28

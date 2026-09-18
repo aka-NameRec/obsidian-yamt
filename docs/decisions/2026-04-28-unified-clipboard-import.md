@@ -1,3 +1,7 @@
+---
+title: Unified clipboard import with modal dialog
+---
+
 # Unified clipboard import with modal dialog
 
 **Date:** 2026-04-28

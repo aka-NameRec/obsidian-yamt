@@ -1,3 +1,7 @@
+---
+title: "Feature: Column Alignment (colalign)"
+---
+
 # Feature: Column Alignment (colalign)
 
 **Дата:** 2025-11-11  

@@ -1,3 +1,7 @@
+---
+title: "DR-003: Help documentation as vault file"
+---
+
 # DR-003: Help documentation as vault file
 
 **Date:** 2026-04-28

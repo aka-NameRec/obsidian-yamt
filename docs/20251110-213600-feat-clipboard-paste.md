@@ -1,3 +1,7 @@
+---
+title: "Feature Implementation: Clipboard Table Paste"
+---
+
 # Feature Implementation: Clipboard Table Paste
 
 **Date:** 2025-11-10  

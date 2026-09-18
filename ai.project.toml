@@ -1,4 +1,4 @@
-ai_standards_version = "1.6.0"
+ai_standards_version = "2.4.0-2026-09-18"
 project_version = "1.2.20251111"
 project_release_date = "2025-11-11"
 
@@ -10,7 +10,8 @@ fragments = [
 ]
 
 features = [
-  "conport",
+  "retrieval-routing",
+  "project-memory",
   "design-first-collaboration",
   "reasoning-hygiene",
   "autonomy-boundaries",
@@ -24,11 +25,11 @@ stacks = [
 ]
 
 local_overrides = [
-  "docs/ai/project-rules.md",
+  "ai/project-rules.md",
 ]
 
 optional_local_overrides = [
-  "docs/ai/private-rules.local.md",
+  "ai/private-rules.local.md",
 ]
 
 [tooling]

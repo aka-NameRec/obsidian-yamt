@@ -32,3 +32,6 @@ context_portal/
 
 # Local installation scripts
 install
+
+# Local cross-session working memory (project-memory feature)
+/docs/local/
